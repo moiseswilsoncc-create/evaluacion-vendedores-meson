@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 // Modelo: Atracción RRSS → Oferta → Calificación + ERP + Cross-sell + Seguimiento
 // ===============================
 
-const TIEMPO_TOTAL = 15 * 60; // 15 minutos
+const TIEMPO_TOTAL = 10 * 60; // 10 minutos (ACTUALIZADO)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNyVJBjU58mNR5oHG77aqtAW-RQDFMJTLA7jL72AesAo2qWCyp6s0xX0NJirE0ZUwyIg/exec";
 
 const questions = [
@@ -451,7 +451,7 @@ export default function EvaluacionVendedor() {
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
-              <p className="font-semibold">⏱️ Tiempo límite: 15 minutos</p>
+              <p className="font-semibold">⏱️ Tiempo límite: 10 minutos</p>
               <p className="text-gray-600 mt-1">30 preguntas • No puedes volver atrás</p>
             </div>
             
