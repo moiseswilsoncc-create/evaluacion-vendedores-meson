@@ -77,7 +77,7 @@ const questions = [
 export default function EvaluacionVendedor() {
   const [postulante, setPostulante] = useState({ rut: "", nombre: "" });
   const [started, setStarted] = useState(false);
-  const [answers, setAnswers] = useState({});
+  const [answers, setAnswers] = useState<Record<number, number>>({});
   const [current, setCurrent] = useState(0);
   const [finished, setFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIEMPO_TOTAL);
@@ -92,7 +92,7 @@ export default function EvaluacionVendedor() {
     return () => clearInterval(timer);
   }, [started, finished, timeLeft]);
 
-  const totalScore = Object.values(answers).reduce((a, b) => a + b, 0);
+  const totalScore = Object.values(answers).reduce((a: number, b: number) => a + b, 0);
   const maxScore = questions.length * 10;
 
   if (!started) {
