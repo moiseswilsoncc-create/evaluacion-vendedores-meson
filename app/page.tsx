@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 // ===============================
 
 const TIEMPO_TOTAL = 15 * 60; // 15 minutos
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNyVJBjU58mNR5oHG77aqtAW-RQDFMJTLA7jL72AesAo2qWCyp6s0xX0NJirE0ZUwyIg/exec";
 
 const questions = [
   { id: 1, text: "Cliente escribe: 'precio papel higiénico por mayor'. ¿Qué haces?", options: [
@@ -75,12 +76,20 @@ const questions = [
 ];
 
 export default function EvaluacionVendedor() {
-  const [postulante, setPostulante] = useState({ rut: "", nombre: "" });
+  const [postulante, setPostulante] = useState({ 
+    rut: "", 
+    nombre: "", 
+    email: "", 
+    telefono: "" 
+  });
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [current, setCurrent] = useState(0);
   const [finished, setFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIEMPO_TOTAL);
+  const [startTime, setStartTime] = useState<number>(0);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!started || finished) return;
@@ -95,16 +104,155 @@ export default function EvaluacionVendedor() {
   const totalScore = Object.values(answers).reduce((a: number, b: number) => a + b, 0);
   const maxScore = questions.length * 10;
 
+  const enviarAGoogleSheets = async () => {
+    setSending(true);
+    try {
+      const tiempoTardado = startTime ? Math.floor((Date.now() - startTime) / 1000) : TIEMPO_TOTAL - timeLeft;
+      const minutos = Math.floor(tiempoTardado / 60);
+      const segundos = tiempoTardado % 60;
+      const tiempoFormateado = `${minutos}m ${segundos}s`;
+      
+      const estado = timeLeft <= 0 ? "Tiempo agotado" : "Completado";
+      const porcentaje = Math.round((totalScore / maxScore) * 100);
+
+      const datos = {
+        rut: postulante.rut,
+        nombre: postulante.nombre,
+        email: postulante.email,
+        telefono: postulante.telefono,
+        puntaje: totalScore,
+        maximo: maxScore,
+        porcentaje: porcentaje,
+        tiempo: tiempoFormateado,
+        estado: estado
+      };
+
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datos)
+      });
+
+      // Con mode: 'no-cors' no podemos leer la respuesta, pero si no hay error, asumimos éxito
+      setSent(true);
+      
+    } catch (error) {
+      console.error('Error al enviar datos:', error);
+      alert('Hubo un problema al enviar los datos. Por favor descarga el CSV como respaldo.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Enviar automáticamente cuando termine
+  useEffect(() => {
+    if (finished && !sent && !sending) {
+      enviarAGoogleSheets();
+    }
+  }, [finished, sent, sending]);
+
+  const descargarCSV = () => {
+    const tiempoTardado = startTime ? Math.floor((Date.now() - startTime) / 1000) : TIEMPO_TOTAL - timeLeft;
+    const minutos = Math.floor(tiempoTardado / 60);
+    const segundos = tiempoTardado % 60;
+    const tiempoFormateado = `${minutos}m ${segundos}s`;
+    const estado = timeLeft <= 0 ? "Tiempo agotado" : "Completado";
+    const porcentaje = Math.round((totalScore / maxScore) * 100);
+
+    const row = {
+      Rut: postulante.rut,
+      Nombre: postulante.nombre,
+      Email: postulante.email,
+      Telefono: postulante.telefono,
+      Puntaje: totalScore,
+      Maximo: maxScore,
+      Porcentaje: `${porcentaje}%`,
+      Tiempo: tiempoFormateado,
+      Estado: estado,
+      Fecha: new Date().toLocaleString()
+    };
+    
+    const csv = `${Object.keys(row).join(',')}\n${Object.values(row).join(',')}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `resultado_${postulante.rut}.csv`;
+    link.click();
+  };
+
+  const formularioCompleto = postulante.rut && postulante.nombre && postulante.email && postulante.telefono;
+
   if (!started) {
     return (
       <div className="p-6 max-w-md mx-auto">
         <Card className="rounded-2xl shadow">
           <CardContent className="space-y-4">
-            <h1 className="text-xl font-bold">Inicio Evaluación</h1>
-            <input className="w-full border p-2 rounded" placeholder="RUT" value={postulante.rut} onChange={e => setPostulante({ ...postulante, rut: e.target.value })} />
-            <input className="w-full border p-2 rounded" placeholder="Nombre completo" value={postulante.nombre} onChange={e => setPostulante({ ...postulante, nombre: e.target.value })} />
-            <Button className="w-full" disabled={!postulante.rut || !postulante.nombre} onClick={() => setStarted(true)}>
-              Comenzar (15 minutos)
+            <h1 className="text-xl font-bold">Evaluación Vendedores Mesón</h1>
+            <p className="text-sm text-gray-600">
+              Esta evaluación mide tu capacidad para trabajar bajo presión en un ambiente de ventas mayoristas.
+            </p>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">RUT</label>
+                <input 
+                  className="w-full border p-2 rounded mt-1" 
+                  placeholder="12.345.678-9" 
+                  value={postulante.rut} 
+                  onChange={e => setPostulante({ ...postulante, rut: e.target.value })} 
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Nombre completo</label>
+                <input 
+                  className="w-full border p-2 rounded mt-1" 
+                  placeholder="Juan Pérez González" 
+                  value={postulante.nombre} 
+                  onChange={e => setPostulante({ ...postulante, nombre: e.target.value })} 
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <input 
+                  type="email"
+                  className="w-full border p-2 rounded mt-1" 
+                  placeholder="juan.perez@gmail.com" 
+                  value={postulante.email} 
+                  onChange={e => setPostulante({ ...postulante, email: e.target.value })} 
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Teléfono móvil</label>
+                <input 
+                  type="tel"
+                  className="w-full border p-2 rounded mt-1" 
+                  placeholder="+56 9 1234 5678" 
+                  value={postulante.telefono} 
+                  onChange={e => setPostulante({ ...postulante, telefono: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
+              <p className="font-semibold">⏱️ Tiempo límite: 15 minutos</p>
+              <p className="text-gray-600 mt-1">30 preguntas • No puedes volver atrás</p>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              disabled={!formularioCompleto} 
+              onClick={() => {
+                setStarted(true);
+                setStartTime(Date.now());
+              }}
+            >
+              Comenzar Evaluación
             </Button>
           </CardContent>
         </Card>
@@ -125,37 +273,63 @@ export default function EvaluacionVendedor() {
 
           {!finished ? (
             <>
-              <p className="font-medium">{q.text}</p>
-              {q.options.map((o, i) => (
-                <Button key={i} variant="outline" className="w-full" onClick={() => {
-                  setAnswers({ ...answers, [q.id]: o.score });
-                  if (current < questions.length - 1) setCurrent(current + 1);
-                  else setFinished(true);
-                }}>
-                  {o.text}
-                </Button>
-              ))}
+              <p className="font-medium text-lg">{q.text}</p>
+              <div className="space-y-3">
+                {q.options.map((o, i) => (
+                  <Button 
+                    key={i} 
+                    variant="outline" 
+                    className="w-full text-left justify-start h-auto py-3 px-4" 
+                    onClick={() => {
+                      setAnswers({ ...answers, [q.id]: o.score });
+                      if (current < questions.length - 1) setCurrent(current + 1);
+                      else setFinished(true);
+                    }}
+                  >
+                    {o.text}
+                  </Button>
+                ))}
+              </div>
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold">Resultado: {totalScore} / {maxScore}</p>
-              <Button onClick={() => {
-                const row = {
-                  Rut: postulante.rut,
-                  Nombre: postulante.nombre,
-                  Puntaje: totalScore,
-                  Maximo: maxScore,
-                  Fecha: new Date().toLocaleString()
-                };
-                const csv = `${Object.keys(row).join(',')}\n${Object.values(row).join(',')}`;
-                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `resultado_${postulante.rut}.csv`;
-                link.click();
-              }}>
-                Descargar resultado (Excel)
-              </Button>
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-bold">Evaluación Completada</h2>
+                
+                {sending && (
+                  <p className="text-blue-600">📤 Enviando resultados...</p>
+                )}
+                
+                {sent && (
+                  <div className="bg-green-50 border border-green-200 rounded p-4">
+                    <p className="text-green-700 font-semibold">✅ Resultados enviados correctamente</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Tus datos han sido registrados. Te contactaremos pronto.
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded-lg p-6 space-y-2">
+                  <p className="text-lg">
+                    <span className="font-semibold">Puntaje:</span> {totalScore} / {maxScore}
+                  </p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {Math.round((totalScore / maxScore) * 100)}%
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={descargarCSV}
+                  variant="outline"
+                  className="w-full"
+                >
+                  📥 Descargar respaldo (CSV)
+                </Button>
+
+                <p className="text-xs text-gray-500 mt-4">
+                  Postulante: {postulante.nombre} ({postulante.rut})
+                </p>
+              </div>
             </>
           )}
         </CardContent>
