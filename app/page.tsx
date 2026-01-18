@@ -5,74 +5,287 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 // ===============================
-// MVP – Evaluación Vendedores Mesón (Alta Exigencia)
-// Uso real: 5–10 postulantes mensuales
+// Evaluación Vendedores Mesón
+// Modelo: Atracción RRSS → Oferta → Calificación + ERP + Cross-sell + Seguimiento
 // ===============================
 
 const TIEMPO_TOTAL = 15 * 60; // 15 minutos
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNyVJBjU58mNR5oHG77aqtAW-RQDFMJTLA7jL72AesAo2qWCyp6s0xX0NJirE0ZUwyIg/exec";
 
 const questions = [
-  { id: 1, text: "Cliente escribe: 'precio papel higiénico por mayor'. ¿Qué haces?", options: [
-    { text: "Envío precio", score: 0 },
-    { text: "Pregunto volumen, negocio y frecuencia", score: 10 },
-    { text: "Ofrezco descuento directo", score: 2 }
-  ]},
-  { id: 2, text: "Fila llena, WhatsApp sonando. ¿A quién priorizas?", options: [
-    { text: "Orden de llegada", score: 2 },
-    { text: "Mayor volumen potencial", score: 10 },
-    { text: "Al más tranquilo", score: 0 }
-  ]},
-  { id: 3, text: "Atiendes 150 clientes diarios. ¿Cómo no pierdes oportunidades?", options: [
-    { text: "Vendo rápido", score: 2 },
-    { text: "Identifico y registro clientes clave", score: 10 },
-    { text: "Espero que vuelvan", score: 0 }
-  ]},
-  { id: 4, text: "Feriante compra solo 2 productos. ¿Qué haces?", options: [
-    { text: "Nada", score: 0 },
-    { text: "Pregunto giro, rotación y días de feria", score: 10 },
-    { text: "Ofrezco algo más barato", score: 2 }
-  ]},
-  { id: 5, text: "Cliente grande compra poco del mix", options: [
-    { text: "Nada", score: 0 },
-    { text: "Detecto brechas de compra", score: 10 },
-    { text: "Le mando lista", score: 2 }
-  ]},
-  { id: 6, text: "11:30 y llevas 30% de la meta diaria", options: [
-    { text: "Me estreso", score: 0 },
-    { text: "Repriorizo clientes grandes", score: 10 },
-    { text: "Espero la tarde", score: 2 }
-  ]},
-  { id: 7, text: "Vas 20% bajo el promedio del equipo", options: [
-    { text: "Me justifico", score: 0 },
-    { text: "Analizo brecha y ajusto foco", score: 10 },
-    { text: "Me desmotivo", score: 0 }
-  ]},
-  { id: 8, text: "Cliente dice: 'solo lo de siempre'", options: [
-    { text: "Ok", score: 1 },
-    { text: "Propongo productos que rota", score: 10 },
-    { text: "No insisto", score: 2 }
-  ]},
-  { id: 9, text: "Quedan 2 horas y estás lejos de la meta", options: [
-    { text: "Acelero sin foco", score: 1 },
-    { text: "Voy por tickets altos", score: 10 },
-    { text: "Me rindo", score: 0 }
-  ]},
-  { id: 10, text: "Un vendedor top…", options: [
-    { text: "Es rápido", score: 2 },
-    { text: "Piensa como empresario", score: 10 },
-    { text: "Es amable", score: 3 }
-  ]},
-  // hasta 30 (se mantiene exigencia real)
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: i + 11,
-    text: `Situación crítica ${i + 11}: ¿cómo reaccionas?`,
+  // ===== PREGUNTAS 1-10: FUNDACIONALES (YA ESTABAN BUENAS) =====
+  { 
+    id: 1, 
+    text: "Cliente escribe: 'precio papel higiénico por mayor'. ¿Qué haces?", 
     options: [
-      { text: "Reacciono tarde", score: 0 },
-      { text: "Actúo con foco en volumen", score: 10 },
-      { text: "Espero instrucciones", score: 2 }
+      { text: "Envío precio", score: 0 },
+      { text: "Pregunto volumen, negocio y frecuencia", score: 10 },
+      { text: "Ofrezco descuento directo", score: 2 }
     ]
-  }))
+  },
+  { 
+    id: 2, 
+    text: "Fila llena, WhatsApp sonando. ¿A quién priorizas?", 
+    options: [
+      { text: "Orden de llegada", score: 2 },
+      { text: "Mayor volumen potencial", score: 10 },
+      { text: "Al más tranquilo", score: 0 }
+    ]
+  },
+  { 
+    id: 3, 
+    text: "Atiendes 150 clientes diarios. ¿Cómo no pierdes oportunidades?", 
+    options: [
+      { text: "Vendo rápido", score: 2 },
+      { text: "Identifico y registro clientes clave", score: 10 },
+      { text: "Espero que vuelvan", score: 0 }
+    ]
+  },
+  { 
+    id: 4, 
+    text: "Feriante compra solo 2 productos. ¿Qué haces?", 
+    options: [
+      { text: "Nada", score: 0 },
+      { text: "Pregunto giro, rotación y días de feria", score: 10 },
+      { text: "Ofrezco algo más barato", score: 2 }
+    ]
+  },
+  { 
+    id: 5, 
+    text: "Cliente grande compra poco del mix", 
+    options: [
+      { text: "Nada", score: 0 },
+      { text: "Detecto brechas de compra", score: 10 },
+      { text: "Le mando lista", score: 2 }
+    ]
+  },
+  { 
+    id: 6, 
+    text: "11:30 y llevas 30% de la meta diaria", 
+    options: [
+      { text: "Me estreso", score: 0 },
+      { text: "Repriorizo clientes grandes", score: 10 },
+      { text: "Espero la tarde", score: 2 }
+    ]
+  },
+  { 
+    id: 7, 
+    text: "Vas 20% bajo el promedio del equipo", 
+    options: [
+      { text: "Me justifico", score: 0 },
+      { text: "Analizo brecha y ajusto foco", score: 10 },
+      { text: "Me desmotivo", score: 0 }
+    ]
+  },
+  { 
+    id: 8, 
+    text: "Cliente dice: 'solo lo de siempre'", 
+    options: [
+      { text: "Ok", score: 1 },
+      { text: "Propongo productos que rota", score: 10 },
+      { text: "No insisto", score: 2 }
+    ]
+  },
+  { 
+    id: 9, 
+    text: "Quedan 2 horas y estás lejos de la meta", 
+    options: [
+      { text: "Acelero sin foco", score: 1 },
+      { text: "Voy por tickets altos", score: 10 },
+      { text: "Me rindo", score: 0 }
+    ]
+  },
+  { 
+    id: 10, 
+    text: "Un vendedor top…", 
+    options: [
+      { text: "Es rápido", score: 2 },
+      { text: "Piensa como empresario", score: 10 },
+      { text: "Es amable", score: 3 }
+    ]
+  },
+
+  // ===== PREGUNTAS 11-30: ESPECÍFICAS DEL MODELO RRSS + ERP =====
+  {
+    id: 11,
+    text: "Cliente vio papel higiénico en oferta en Instagram y vino solo por eso. ¿Qué haces?",
+    options: [
+      { text: "Le vendo el papel y listo", score: 0 },
+      { text: "Pregunto qué negocio tiene, cuánto rota, y registro en ERP", score: 10 },
+      { text: "Le ofrezco más papel con descuento", score: 3 }
+    ]
+  },
+  {
+    id: 12,
+    text: "Cliente nuevo dice: 'solo quiero lo de la oferta'. ¿Cuál es tu prioridad?",
+    options: [
+      { text: "Vender rápido y atender al siguiente", score: 1 },
+      { text: "Capturar datos: negocio, RUT, teléfono, días de compra", score: 10 },
+      { text: "Convencerlo de comprar más", score: 4 }
+    ]
+  },
+  {
+    id: 13,
+    text: "Llevas 20 clientes atendidos, pero olvidaste llenar el ERP en 15. ¿Qué haces?",
+    options: [
+      { text: "Lo lleno después si me acuerdo", score: 0 },
+      { text: "No es tan importante, sigo vendiendo", score: 0 },
+      { text: "Pauso, registro todo ahora mismo, ajusto mi ritmo", score: 10 }
+    ]
+  },
+  {
+    id: 14,
+    text: "Cliente compra 3 cajas de producto en oferta. ¿Qué pregunta haces PRIMERO?",
+    options: [
+      { text: "¿Necesitas bolsa?", score: 0 },
+      { text: "¿Qué tipo de negocio tienes y qué otros productos rotas?", score: 10 },
+      { text: "¿Quieres llevar más con descuento?", score: 5 }
+    ]
+  },
+  {
+    id: 15,
+    text: "Es la 3era vez que viene el mismo cliente, pero no lo reconoces. ¿Por qué?",
+    options: [
+      { text: "Atiendo muchos clientes, es normal", score: 0 },
+      { text: "Porque no registré sus datos ni hice seguimiento", score: 10 },
+      { text: "No es mi culpa, vienen muchos", score: 0 }
+    ]
+  },
+  {
+    id: 16,
+    text: "Cliente de almacén compra 50 unidades de un producto. ¿Qué haces después de cobrar?",
+    options: [
+      { text: "Le doy el producto y chao", score: 0 },
+      { text: "Le tomo WhatsApp y le digo: 'Te aviso las ofertas de la semana'", score: 10 },
+      { text: "Le pregunto si necesita algo más hoy", score: 4 }
+    ]
+  },
+  {
+    id: 17,
+    text: "La oferta de esta semana es detergente. Cliente viene solo por eso. ¿Qué productos ofreces?",
+    options: [
+      { text: "Nada, ya compró lo que quería", score: 0 },
+      { text: "Más detergente", score: 2 },
+      { text: "Cloro, desinfectante, jabón: productos que TAMBIÉN rota", score: 10 }
+    ]
+  },
+  {
+    id: 18,
+    text: "Cliente dice: 'es mi primera vez aquí'. ¿Cuál es tu objetivo principal?",
+    options: [
+      { text: "Venderle bien hoy", score: 3 },
+      { text: "Registrarlo en ERP y que vuelva TODAS las semanas", score: 10 },
+      { text: "Ofrecerle la oferta del día", score: 1 }
+    ]
+  },
+  {
+    id: 19,
+    text: "Feriante compra 10 unidades. Le preguntas qué negocio tiene y dice: 'feria los sábados'. ¿Qué haces?",
+    options: [
+      { text: "Ok, listo", score: 0 },
+      { text: "Registro: feriante, compra semanal, contacto viernes", score: 10 },
+      { text: "Le ofrezco más productos", score: 3 }
+    ]
+  },
+  {
+    id: 20,
+    text: "Tu jefe revisa el ERP y ve que 40% de tus ventas NO tienen datos del cliente. ¿Qué pasó?",
+    options: [
+      { text: "No tuve tiempo, había mucha gente", score: 0 },
+      { text: "Falla mía: prioricé velocidad sobre registro", score: 10 },
+      { text: "El sistema es lento", score: 0 }
+    ]
+  },
+  {
+    id: 21,
+    text: "Cliente viene por oferta de arroz. Compra 5 sacos. ¿Qué NO debes olvidar?",
+    options: [
+      { text: "Darle bolsa", score: 0 },
+      { text: "Preguntar tipo de negocio, frecuencia, y registrar en ERP", score: 10 },
+      { text: "Ofrecerle más arroz", score: 2 }
+    ]
+  },
+  {
+    id: 22,
+    text: "Atiendes a un cliente que vino hace 2 semanas. ¿Cómo sabes si volvió?",
+    options: [
+      { text: "No sé, no lo registré", score: 0 },
+      { text: "Busco su RUT en el ERP", score: 10 },
+      { text: "Trato de recordar su cara", score: 1 }
+    ]
+  },
+  {
+    id: 23,
+    text: "Cliente de restaurant compra aceite en oferta. ¿Qué preguntas clave haces?",
+    options: [
+      { text: "¿Cuántos litros usas por semana? ¿Qué más compras para la cocina?", score: 10 },
+      { text: "¿Necesitas más aceite?", score: 2 },
+      { text: "¿Está bueno el precio?", score: 0 }
+    ]
+  },
+  {
+    id: 24,
+    text: "Vendiste $2M hoy pero solo registraste 30% de los clientes en ERP. ¿Está bien?",
+    options: [
+      { text: "Sí, la venta es lo importante", score: 0 },
+      { text: "No, perdí 70% de oportunidades de seguimiento", score: 10 },
+      { text: "Depende del día", score: 2 }
+    ]
+  },
+  {
+    id: 25,
+    text: "Cliente compra solo el producto en oferta por 3 semanas seguidas. ¿Qué significa?",
+    options: [
+      { text: "Es un buen cliente, sigue viniendo", score: 2 },
+      { text: "Fallé: no amplié su canasta ni detecté otras necesidades", score: 10 },
+      { text: "Está bien, al menos compra algo", score: 0 }
+    ]
+  },
+  {
+    id: 26,
+    text: "Tu meta es vender $3M al día. ¿Qué estrategia NO te ayuda?",
+    options: [
+      { text: "Atender rápido a todos por igual", score: 10 },
+      { text: "Identificar clientes grandes y registrarlos", score: 0 },
+      { text: "Hacer cross-sell en cada venta", score: 0 }
+    ]
+  },
+  {
+    id: 27,
+    text: "Cliente: '¿Tienen servilletas?' Tú: 'Sí, ¿cuántas?' Cliente: '10 paquetes'. ¿Qué falta?",
+    options: [
+      { text: "Nada, es una buena venta", score: 0 },
+      { text: "Preguntar: negocio, frecuencia, qué más necesita, registrar", score: 10 },
+      { text: "Ofrecer más paquetes", score: 3 }
+    ]
+  },
+  {
+    id: 28,
+    text: "Fin de mes: vendiste $50M pero tu jefe dice que 'perdiste oportunidades'. ¿Por qué?",
+    options: [
+      { text: "No sé, vendí mucho", score: 0 },
+      { text: "No califiqué clientes ni hice seguimiento: fueron ventas puntuales", score: 10 },
+      { text: "Es injusto, hice mi trabajo", score: 0 }
+    ]
+  },
+  {
+    id: 29,
+    text: "Cliente nuevo compra $200k. ¿Qué información MÍNIMA necesitas capturar?",
+    options: [
+      { text: "RUT y monto", score: 2 },
+      { text: "RUT, nombre, teléfono, tipo negocio, frecuencia de compra", score: 10 },
+      { text: "Solo el RUT", score: 0 }
+    ]
+  },
+  {
+    id: 30,
+    text: "Diferencia entre VENDEDOR y TOMADOR DE PEDIDOS en este mesón:",
+    options: [
+      { text: "El vendedor atiende rápido, el tomador es lento", score: 0 },
+      { text: "El vendedor califica, registra y fideliza; el tomador solo cobra", score: 10 },
+      { text: "El vendedor es más amable", score: 0 }
+    ]
+  }
 ];
 
 export default function EvaluacionVendedor() {
@@ -136,7 +349,6 @@ export default function EvaluacionVendedor() {
         body: JSON.stringify(datos)
       });
 
-      // Con mode: 'no-cors' no podemos leer la respuesta, pero si no hay error, asumimos éxito
       setSent(true);
       
     } catch (error) {
@@ -147,7 +359,6 @@ export default function EvaluacionVendedor() {
     }
   };
 
-  // Enviar automáticamente cuando termine
   useEffect(() => {
     if (finished && !sent && !sending) {
       enviarAGoogleSheets();
